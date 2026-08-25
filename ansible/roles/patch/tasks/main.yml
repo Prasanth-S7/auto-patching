@@ -1,11 +1,24 @@
 ---
-- name: "Update all packages"
-  become: true
-  community.general.pacman:
-    update_cache: yes
-    upgrade: yes
-  register: patch_result
+- block:
+    - name: "Update all packages"
+      become: true
+      become_user: root
+      become_method: sudo
 
-- name: "Patch result"
-  ansible.builtin.debug:
-    var: patch_result
+      apt:
+        update_cache: yes
+        upgrade: yes
+      register: patch_result
+
+    - name: "Patch result"
+      ansible.builtin.debug:
+        var: patch_result
+
+  rescue:
+    - name: "Display patch failure"
+      ansible.builtin.debug:
+        msg: "Package update failed on {{ inventory_hostname }}"
+
+    - name: "Fail the play"
+      ansible.builtin.fail:
+        msg: "Patching failed on {{ inventory_hostname }}. Please check the APT configuration and repository connectivity."

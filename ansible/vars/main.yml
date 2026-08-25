@@ -1,0 +1,6 @@
+---
+supported_distros:
+  - RedHat
+  - openSUSE
+
+local_dir: "/tmp/ansible/sys-patching"
