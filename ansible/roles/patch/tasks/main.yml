@@ -1,0 +1,11 @@
+---
+- name: "Update all packages"
+  become: true
+  community.general.pacman:
+    update_cache: yes
+    upgrade: yes
+  register: patch_result
+
+- name: "Patch result"
+  ansible.builtin.debug:
+    var: patch_result

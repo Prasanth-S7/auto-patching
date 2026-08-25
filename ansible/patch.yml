@@ -1,0 +1,17 @@
+- name: "PLAY - Preflight / localhost stuff"
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  roles:
+    - patch
+
+  # tasks:
+  #   - name: "id"
+  #     command: id
+  #     register: id_result
+
+  #   - name: "Print id"
+  #     debug:
+  #       var: id_result
+    
