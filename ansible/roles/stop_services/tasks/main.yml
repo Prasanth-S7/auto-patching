@@ -3,7 +3,7 @@
     name: "{{ item }}"
     state: stopped
   register: result_systemd_stop
-  ignore_errors: yes
+  ignore_errors: true
   loop:
     - tomcat.service
     # - apache2.service
@@ -40,6 +40,6 @@
 - name: Write per-host report to control node
   ansible.builtin.copy:
     content: "{{ patch_report | to_nice_json }}"
-    dest: "{{ local_dir }}/{{ inventory_hostname }}_patch_status.json"
+    dest: "{{ report_file }}"
   delegate_to: localhost
   become: false

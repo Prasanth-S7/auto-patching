@@ -6,11 +6,13 @@
   become_method: sudo
   vars_files:
     - vars/main.yml
+  vars:
+    report_dir: "{{ local_dir }}/patch"
+    report_file: "{{ report_dir }}/{{ inventory_hostname }}_status.json"
 
   roles:
     - pre_check
     - stop_services
-    - sanity_reboot
-    - stop_services
-    # - patch
-    # - reboot
+    - patch
+    - reboot
+    - check_services

@@ -11,18 +11,42 @@
       ansible.builtin.debug:
         var: patch_result
 
-    - name: "Store complete patch result"
+    - name: "Record successful patch result"
+      ansible.builtin.set_fact:
+        patch_report: >-
+          {{
+            patch_report | default({}) | combine({
+              'patch_status': {
+                'status': 'success',
+                'result': patch_result
+              }
+            }, recursive=True)
+          }}
+
+    - name: "Write per-host report with patch result"
       ansible.builtin.copy:
-        content: "{{ patch_result | to_nice_json }}"
-        dest: "/tmp/ansible/patch.{{ inventory_hostname }}.json"
+        content: "{{ patch_report | to_nice_json }}"
+        dest: "{{ report_file }}"
       delegate_to: localhost
       become: false
 
   rescue:
-    - name: "Store patch failure"
+    - name: "Record failed patch result"
+      ansible.builtin.set_fact:
+        patch_report: >-
+          {{
+            patch_report | default({}) | combine({
+              'patch_status': {
+                'status': 'failed',
+                'result': patch_result | default({})
+              }
+            }, recursive=True)
+          }}
+
+    - name: "Write per-host report with patch failure"
       ansible.builtin.copy:
-        content: "{{ patch_result | to_nice_json }}"
-        dest: "/tmp/ansible/patch.{{ inventory_hostname }}.FAILED.json"
+        content: "{{ patch_report | to_nice_json }}"
+        dest: "{{ report_file }}"
       delegate_to: localhost
       become: false
 

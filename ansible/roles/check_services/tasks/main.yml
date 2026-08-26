@@ -1,0 +1,46 @@
+---
+- name: Gather service facts after reboot
+  ansible.builtin.service_facts:
+
+- name: Show service health status
+  ansible.builtin.debug:
+    msg: >-
+      HOSTNAME: {{ inventory_hostname }} |
+      Service: {{ item }} |
+      Status: {{
+        'NOT_PRESENT' if item not in ansible_facts.services
+        else (ansible_facts.services[item].state | upper)
+      }}
+  loop:
+    - tomcat.service
+    # - apache2.service
+    - nginx.service
+
+- name: Record service health status
+  ansible.builtin.set_fact:
+    patch_report: >-
+      {{
+        patch_report | default({}) | combine({
+          'services_status_after_reboot': patch_report.services_status_after_reboot | default({}) | combine({
+            item: (
+              'not_present' if item not in ansible_facts.services
+              else 'healthy' if ansible_facts.services[item].state == 'running'
+              else 'failed' if ansible_facts.services[item].state == 'failed'
+              else 'unhealthy'
+            )
+          })
+        }, recursive=True)
+      }}
+  loop:
+    - tomcat.service
+    # - apache2.service
+    - nginx.service
+  loop_control:
+    label: "{{ item }}"
+
+- name: Write per-host report to control node
+  ansible.builtin.copy:
+    content: "{{ patch_report | to_nice_json }}"
+    dest: "{{ report_file }}"
+  delegate_to: localhost
+  become: false

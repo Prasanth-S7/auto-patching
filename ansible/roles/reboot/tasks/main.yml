@@ -1,0 +1,35 @@
+- name: Rebooting the server
+  ansible.builtin.reboot:
+    msg: "HOSTNAME: {{ inventory_hostname }} | Rebooting initiated by Ansible"
+    reboot_timeout: 600
+    post_reboot_delay: 10
+  register: result_reboot
+  ignore_errors: true
+
+- name: Show reboot status
+  ansible.builtin.debug:
+    msg: >-
+      HOSTNAME: {{ inventory_hostname }} |
+      Reboot Status: {{
+        'FAILED' if result_reboot.failed | default(false)
+        else 'SUCCESS'
+      }}
+
+- name: Record instance reboot status
+  ansible.builtin.set_fact:
+    patch_report: >-
+      {{
+        patch_report | default({}) | combine({
+          'reboot_status': (
+            'failed' if (result_reboot.failed | default(false))
+            else 'success'
+          )
+        }, recursive=True)
+      }}
+
+- name: Write per-host report to control node
+  ansible.builtin.copy:
+    content: "{{ patch_report | to_nice_json }}"
+    dest: "{{ report_file }}"
+  delegate_to: localhost
+  become: false

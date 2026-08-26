@@ -18,9 +18,17 @@
     when: ansible_distribution not in supported_distros
 
   - name: Write per-host report to control node
+    ansible.builtin.file:
+      path: "{{ report_dir }}"
+      state: directory
+      mode: "0750"
+    delegate_to: localhost
+    become: false
+
+  - name: Write per-host report to control node
     ansible.builtin.copy:
       content: "{{ patch_report | to_nice_json }}"
-      dest: "{{ local_dir }}/{{ inventory_hostname }}_patch_status.json"
+      dest: "{{ report_file }}"
     delegate_to: localhost
     become: false
 
