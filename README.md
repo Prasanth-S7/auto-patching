@@ -1,4 +1,4 @@
-# Auto Patching Ansible
+# Auto Patching Using Ansible
 
 ## Sanity Reboot
 
