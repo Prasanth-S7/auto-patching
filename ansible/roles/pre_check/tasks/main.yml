@@ -1,28 +1,30 @@
 - block:
-  - name: "Check if not a RHEL or openSUSE server"
-    lineinfile:
-      line: "HOSTNAME: {{ inventory_hostname }} | Not a RHEL or openSUSE server"
-      dest: "{{ local_dir }}/update.{{ inventory_hostname }}.FAILED"
-      create: yes
+  - name: Record pre_check result
+    ansible.builtin.set_fact:
+      patch_report: >-
+        {{
+          patch_report | default({}) | combine({
+            'pre_check_status': {
+              'status': 'passed' if ansible_distribution in supported_distros else 'failed',
+              'os': ansible_distribution,
+              'os_version': ansible_distribution_version
+            }
+          }, recursive=True)
+        }}
+
+  - name: Add failure reason if unsupported OS
+    ansible.builtin.set_fact:
+      patch_report: "{{ patch_report | combine({'pre_check_status': {'reason': 'Unsupported OS: ' + ansible_distribution}}, recursive=True) }}"
     when: ansible_distribution not in supported_distros
+
+  - name: Write per-host report to control node
+    ansible.builtin.copy:
+      content: "{{ patch_report | to_nice_json }}"
+      dest: "{{ local_dir }}/{{ inventory_hostname }}_patch_status.json"
     delegate_to: localhost
+    become: false
 
-  - name: "Fail host if is not RHEL or openSUSE "
-    fail:
-      msg: "HOSTNAME: {{ inventory_hostname }} | Not a RHEL or Centos server"
+  - name: Fail host if not a supported OS
+    ansible.builtin.fail:
+      msg: "HOSTNAME: {{ inventory_hostname }} | Not a supported OS: {{ ansible_distribution }}"
     when: ansible_distribution not in supported_distros
-
-- name: "Check if the server is reachable"
-  ping:
-  register: ping_result
-  ignore_errors: yes
-
-- name: "Fail host if not reachable"
-  fail:
-    msg: "HOSTNAME: {{ inventory_hostname }} | Server is not reachable"
-  when: ping_result is failed
-
-- name: "Stop the necessary services before rebooting"
-  shell: systemctl list-units --type=service | grep -E 'tomcat.service|apache2.service'
-  register: services
-

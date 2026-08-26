@@ -1,6 +1,7 @@
 ---
 supported_distros:
-  - RedHat
-  - openSUSE
+  # - RedHat
+  # - openSUSE
+  - Ubuntu
 
 local_dir: "/tmp/ansible/sys-patching"

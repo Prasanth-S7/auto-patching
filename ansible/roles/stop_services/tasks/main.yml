@@ -1,0 +1,45 @@
+- name: Disable and stop service if exists
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+  register: result_systemd_stop
+  ignore_errors: yes
+  loop:
+    - tomcat.service
+    # - apache2.service
+    - nginx.service
+
+- name: Show service stop status
+  ansible.builtin.debug:
+    msg: >-
+      HOSTNAME: {{ inventory_hostname }} |
+      Service: {{ item.item }} |
+      Status: {{ 'STOPPED' if item.failed is not defined or not item.failed else 'FAILED' }}
+  loop: "{{ result_systemd_stop.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Record service stop status
+  ansible.builtin.set_fact:
+    patch_report: >-
+      {{
+        patch_report | default({}) | combine({
+          'services_status': patch_report.services_status | default({}) | combine({
+            item.item: (
+              'not_present' if (item.msg is defined and 'Could not find the requested service' in item.msg)
+              else 'failed' if (item.failed | default(false))
+              else 'stopped'
+            )
+          })
+        }, recursive=True)
+      }}
+  loop: "{{ result_systemd_stop.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: Write per-host report to control node
+  ansible.builtin.copy:
+    content: "{{ patch_report | to_nice_json }}"
+    dest: "{{ local_dir }}/{{ inventory_hostname }}_patch_status.json"
+  delegate_to: localhost
+  become: false

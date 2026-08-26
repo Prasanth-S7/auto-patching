@@ -1,13 +1,16 @@
 - name: "Auto Patching Playbook"
-  hosts: localhost
-  connection: local
   gather_facts: true
+  hosts: all
+  become: true
+  become_user: root
+  become_method: sudo
   vars_files:
     - vars/main.yml
 
   roles:
     - pre_check
-    - sand_reboot
     - stop_services
-    - patch
-    - reboot
+    - sanity_reboot
+    - stop_services
+    # - patch
+    # - reboot
