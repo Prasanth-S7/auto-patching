@@ -8,6 +8,15 @@
     - vars/main.yml
   vars:
     lambda_report_url: "{{ lambda_patch_status_url }}"
+    report_workflow: patch
+
+  pre_tasks:
+    - name: Generate one run ID for this playbook execution
+      ansible.builtin.set_fact:
+        run_id: "run-{{ lookup('ansible.builtin.pipe', 'date -u +%Y-%m-%d-%H-%M-%S') }}-{{ lookup('ansible.builtin.pipe', 'uuidgen | cut -c1-6') }}"
+      delegate_to: localhost
+      delegate_facts: true
+      run_once: true
 
   roles:
     - pre_check
@@ -20,12 +29,12 @@
         report_stage: stop_services
     - role: send_report
       vars:
-        report_stage: patching
+        report_stage: patch
         report_stage_status: in_progress
     - patch
     - role: send_report
       vars:
-        report_stage: patching
+        report_stage: patch
     - reboot
     - role: send_report
       vars:

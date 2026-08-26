@@ -8,6 +8,15 @@
     - vars/main.yml
   vars:
     lambda_report_url: "{{ lambda_sanity_reboot_status_url }}"
+    report_workflow: sanity_reboot
+
+  pre_tasks:
+    - name: Generate one run ID for this playbook execution
+      ansible.builtin.set_fact:
+        run_id: "run-{{ lookup('ansible.builtin.pipe', 'date -u +%Y-%m-%d-%H-%M-%S') }}-{{ lookup('ansible.builtin.pipe', 'uuidgen | cut -c1-6') }}"
+      delegate_to: localhost
+      delegate_facts: true
+      run_once: true
 
   roles:
     - pre_check
@@ -21,7 +30,7 @@
     - reboot
     - role: send_report
       vars:
-        report_stage: reboot
+        report_stage: sanity_reboot
     - check_services
     - role: send_report
       vars:
