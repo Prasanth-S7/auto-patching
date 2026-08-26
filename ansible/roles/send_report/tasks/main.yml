@@ -1,0 +1,37 @@
+---
+- name: Verify Lambda report URL is configured
+  ansible.builtin.assert:
+    that:
+      - lambda_report_url | length > 0
+    fail_msg: >-
+      Set lambda_report_url to the correct API Gateway URL, or configure
+      PATCH_STATUS_URL / SANITY_REBOOT_STATUS_URL before running Ansible.
+
+- name: Send report to Lambda
+  ansible.builtin.uri:
+    url: "{{ lambda_report_url }}"
+    method: POST
+    body_format: json
+    body: >-
+      {{
+        patch_report | default({}) | combine({
+          'host': inventory_hostname,
+          'stage': report_stage | default('complete'),
+          'stage_status': report_stage_status | default('completed'),
+          'updated_at': ansible_date_time.iso8601
+        }, recursive=True)
+      }}
+    headers:
+      Content-Type: application/json
+    status_code: 200
+    return_content: true
+  delegate_to: localhost
+  become: false
+  register: lambda_report_result
+
+- name: Show Lambda report status
+  ansible.builtin.debug:
+    msg: >-
+      HOSTNAME: {{ inventory_hostname }} |
+      Lambda report status: {{ lambda_report_result.status }} |
+      Response: {{ lambda_report_result.json | default(lambda_report_result.content) }}

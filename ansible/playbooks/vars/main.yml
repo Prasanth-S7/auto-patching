@@ -4,4 +4,7 @@ supported_distros:
   # - openSUSE
   - Ubuntu
 
-local_dir: "/tmp/ansible/sys-patching"
+local_dir: "/var/lib/sys-patching"
+
+lambda_patch_status_url: "{{ lookup('ansible.builtin.env', 'PATCH_STATUS_URL') }}"
+lambda_sanity_reboot_status_url: "{{ lookup('ansible.builtin.env', 'SANITY_REBOOT_STATUS_URL') }}"

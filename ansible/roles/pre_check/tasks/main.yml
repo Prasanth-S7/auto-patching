@@ -17,21 +17,6 @@
       patch_report: "{{ patch_report | combine({'pre_check_status': {'reason': 'Unsupported OS: ' + ansible_distribution}}, recursive=True) }}"
     when: ansible_distribution not in supported_distros
 
-  - name: Write per-host report to control node
-    ansible.builtin.file:
-      path: "{{ report_dir }}"
-      state: directory
-      mode: "0750"
-    delegate_to: localhost
-    become: false
-
-  - name: Write per-host report to control node
-    ansible.builtin.copy:
-      content: "{{ patch_report | to_nice_json }}"
-      dest: "{{ report_file }}"
-    delegate_to: localhost
-    become: false
-
   - name: Fail host if not a supported OS
     ansible.builtin.fail:
       msg: "HOSTNAME: {{ inventory_hostname }} | Not a supported OS: {{ ansible_distribution }}"

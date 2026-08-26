@@ -7,11 +7,22 @@
   vars_files:
     - vars/main.yml
   vars:
-    report_dir: "{{ local_dir }}/sanity-reboot"
-    report_file: "{{ report_dir }}/{{ inventory_hostname }}_status.json"
+    lambda_report_url: "{{ lambda_sanity_reboot_status_url }}"
 
   roles:
     - pre_check
+    - role: send_report
+      vars:
+        report_stage: pre_check
     - stop_services
-    - sanity_reboot
+    - role: send_report
+      vars:
+        report_stage: stop_services
+    - reboot
+    - role: send_report
+      vars:
+        report_stage: reboot
     - check_services
+    - role: send_report
+      vars:
+        report_stage: service_health_check

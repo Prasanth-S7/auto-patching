@@ -26,10 +26,3 @@
           )
         }, recursive=True)
       }}
-
-- name: Write per-host report to control node
-  ansible.builtin.copy:
-    content: "{{ patch_report | to_nice_json }}"
-    dest: "{{ report_file }}"
-  delegate_to: localhost
-  become: false

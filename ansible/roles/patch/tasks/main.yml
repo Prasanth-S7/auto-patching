@@ -23,13 +23,6 @@
             }, recursive=True)
           }}
 
-    - name: "Write per-host report with patch result"
-      ansible.builtin.copy:
-        content: "{{ patch_report | to_nice_json }}"
-        dest: "{{ report_file }}"
-      delegate_to: localhost
-      become: false
-
   rescue:
     - name: "Record failed patch result"
       ansible.builtin.set_fact:
@@ -43,12 +36,12 @@
             }, recursive=True)
           }}
 
-    - name: "Write per-host report with patch failure"
-      ansible.builtin.copy:
-        content: "{{ patch_report | to_nice_json }}"
-        dest: "{{ report_file }}"
-      delegate_to: localhost
-      become: false
+    - name: "Send failed patch report to Lambda"
+      ansible.builtin.include_role:
+        name: send_report
+      vars:
+        report_stage: patching
+        report_stage_status: failed
 
     - name: "Display patch failure"
       ansible.builtin.debug:
