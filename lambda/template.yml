@@ -1,0 +1,218 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Simple API for health and patch status checks.
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 10
+    MemorySize: 256
+    Architectures:
+      - x86_64
+
+Resources:
+  PatchStatusTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName:
+        Fn::Sub: '${AWS::StackName}-patch-status'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: host
+          AttributeType: S
+        - AttributeName: run_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: RunIdIndex
+          KeySchema:
+            - AttributeName: run_id
+              KeyType: HASH
+            - AttributeName: host
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  SanityRebootStatusTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName:
+        Fn::Sub: '${AWS::StackName}-sanity-reboot-status'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: host
+          AttributeType: S
+        - AttributeName: run_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: RunIdIndex
+          KeySchema:
+            - AttributeName: run_id
+              KeyType: HASH
+            - AttributeName: host
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: cjs
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+    Properties:
+      CodeUri: .
+      Handler: src/handlers/health.handler
+      Events:
+        Health:
+          Type: HttpApi
+          Properties:
+            Path: /health
+            Method: GET
+
+  PatchStatusFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: cjs
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+    Properties:
+      CodeUri: .
+      Handler: src/handlers/getPatchStatus.handler
+      Environment:
+        Variables:
+          PATCH_STATUS_TABLE:
+            Ref: PatchStatusTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName:
+              Ref: PatchStatusTable
+      Events:
+        PatchStatus:
+          Type: HttpApi
+          Properties:
+            Path: /patch-status
+            Method: GET
+
+  StorePatchStatusFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: cjs
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+    Properties:
+      CodeUri: .
+      Handler: src/handlers/storePatchStatus.handler
+      Environment:
+        Variables:
+          PATCH_STATUS_TABLE:
+            Ref: PatchStatusTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+              Resource:
+                Fn::GetAtt:
+                  - PatchStatusTable
+                  - Arn
+      Events:
+        StorePatchStatus:
+          Type: HttpApi
+          Properties:
+            Path: /patch-status
+            Method: POST
+
+  SanityRebootStatusFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: cjs
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+    Properties:
+      CodeUri: .
+      Handler: src/handlers/getPatchStatus.handler
+      Environment:
+        Variables:
+          PATCH_STATUS_TABLE:
+            Ref: SanityRebootStatusTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName:
+              Ref: SanityRebootStatusTable
+      Events:
+        SanityRebootStatus:
+          Type: HttpApi
+          Properties:
+            Path: /sanity-reboot-status
+            Method: GET
+
+  StoreSanityRebootStatusFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: cjs
+        Minify: false
+        Target: es2022
+        Sourcemap: true
+    Properties:
+      CodeUri: .
+      Handler: src/handlers/storePatchStatus.handler
+      Environment:
+        Variables:
+          PATCH_STATUS_TABLE:
+            Ref: SanityRebootStatusTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+              Resource:
+                Fn::GetAtt:
+                  - SanityRebootStatusTable
+                  - Arn
+      Events:
+        StoreSanityRebootStatus:
+          Type: HttpApi
+          Properties:
+            Path: /sanity-reboot-status
+            Method: POST
+
+Outputs:
+  ApiUrl:
+    Description: HTTP API endpoint
+    Value:
+      Fn::Sub: 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com'
+  PatchStatusTableName:
+    Description: DynamoDB table used by the patch status function
+    Value:
+      Ref: PatchStatusTable
+  SanityRebootStatusTableName:
+    Description: DynamoDB table used for sanity reboot results
+    Value:
+      Ref: SanityRebootStatusTable
