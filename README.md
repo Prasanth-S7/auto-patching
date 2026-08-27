@@ -14,6 +14,6 @@ ansible-playbook playbooks/sanity-reboot.yml \
 Run the patch playbook:
 
 ```bash
-ansible-playbook patch.yml \
+ansible-playbook playbooks/patch.yml \
   -e "lambda_patch_status_url=https://qugbbgezz4.execute-api.ap-south-1.amazonaws.com/patch-status"
 ```
